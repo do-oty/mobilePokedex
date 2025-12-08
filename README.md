@@ -277,4 +277,4 @@ This project is for educational purposes.
 
 ## Need Help?
 
-Check `PROGRESS.md` for current development status and known issues.
+Check [PROGRESS.md](./PROGRESS.md) for current development status and known issues.
