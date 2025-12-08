@@ -21,6 +21,52 @@ Before you begin, ensure you have the following installed:
 - **Xcode** (latest version)
 - **CocoaPods**: `sudo gem install cocoapods`
 
+## Setting Up Android Emulator
+
+If you don't have a physical Android device, you'll need to set up an Android emulator:
+
+### 1. Install Android Studio
+Download and install from [developer.android.com](https://developer.android.com/studio)
+
+### 2. Install SDK and Tools
+Open Android Studio → **More Actions** → **SDK Manager**:
+- **SDK Platforms**: Install Android 13.0 (API 33) or higher
+- **SDK Tools**: Check these are installed:
+  - Android SDK Build-Tools
+  - Android Emulator
+  - Android SDK Platform-Tools
+
+### 3. Create a Virtual Device (AVD)
+1. Open Android Studio → **More Actions** → **Virtual Device Manager**
+2. Click **Create Device**
+3. Choose a phone (e.g., "Pixel 5" or "Medium Phone")
+4. Select a system image (API 33+ recommended)
+5. Click **Finish**
+
+### 4. Start the Emulator
+
+**From Android Studio:**
+- Open Virtual Device Manager → Click ▶️ Play button
+
+**From Command Line:**
+```bash
+# List available emulators
+emulator -list-avds
+
+# Start emulator (replace with your AVD name)
+emulator -avd Pixel_5_API_33
+```
+
+### System Requirements for Emulator:
+- **CPU**: x86_64 with virtualization support (Intel VT-x or AMD-V)
+- **RAM**: 8GB minimum (16GB recommended)
+- **Storage**: 10GB free space
+- **GPU**: Hardware acceleration enabled (automatically uses your system GPU)
+  - AMD/NVIDIA GPUs work great
+  - Intel integrated graphics also supported
+
+**Note**: The emulator uses hardware acceleration, so it runs smoothly even on laptops with integrated graphics.
+
 ## Setup Instructions
 
 ### 1. Clone the Repository
@@ -166,6 +212,30 @@ npm start -- --reset-cache
 # Reinstall dependencies
 rm -rf node_modules package-lock.json
 npm install
+```
+
+### Emulator not detected
+```bash
+# Check if emulator is running
+adb devices
+
+# If no devices show up:
+# 1. Make sure emulator is fully booted (wait for home screen)
+# 2. Restart adb server
+adb kill-server
+adb start-server
+adb devices
+```
+
+### Emulator runs but app won't install
+```bash
+# Clean the Android build
+cd android
+./gradlew clean
+cd ..
+
+# Then try running again
+npm run android
 ```
 
 ## Building for Production
