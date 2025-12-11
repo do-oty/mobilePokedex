@@ -70,3 +70,4 @@ if (typeof global !== 'undefined') {
   console.log('   Call testSearchCache() or clearSearchCache() from the debugger');
 }
 
+

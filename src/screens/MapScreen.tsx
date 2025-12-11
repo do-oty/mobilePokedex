@@ -408,22 +408,24 @@ const MapScreen = () => {
   // Detect biome zones when location changes
   useEffect(() => {
     if (center) {
-      // Use real-world biome detection for user's location (ONLY real-world, no fallback)
+      // Use real-world biome detection for user's location, with fallback
       detectBiomeFromRealWorld(center.latitude, center.longitude, 800)
         .then(biome => {
           if (biome) {
             setCurrentBiome(biome);
             console.log(`📍 Current biome detected: ${biome}`);
           } else {
-            // If no real-world data, default to grassland (but this should be rare)
-            console.warn('No real-world biome data available, using grassland');
-            setCurrentBiome('grassland');
+            // If no real-world data, use fallback detection
+            const fallbackBiome = detectBiomeFallback(center.latitude, center.longitude);
+            setCurrentBiome(fallbackBiome);
+            console.log(`📍 Using fallback biome: ${fallbackBiome}`);
           }
         })
         .catch((error) => {
-          // On error, default to grassland
-          console.warn('Real-world biome detection error, using grassland:', error);
-          setCurrentBiome('grassland');
+          // On error, use fallback detection
+          const fallbackBiome = detectBiomeFallback(center.latitude, center.longitude);
+          setCurrentBiome(fallbackBiome);
+          console.log(`📍 Using fallback biome after error: ${fallbackBiome}`);
         });
       
       // Detect biome zones around the user (gradient-based)

@@ -57,7 +57,7 @@ const queryOSM = async (
     if (!response.ok) {
       // Don't throw for 504/timeout errors - just return empty and use fallback
       if (response.status === 504 || response.status === 408) {
-        console.warn('OSM API timeout - using fallback detection');
+        // Silently use fallback - no need to log every timeout
         return [];
       }
       throw new Error(`OSM API error: ${response.status}`);
@@ -66,7 +66,7 @@ const queryOSM = async (
     const data = await response.json();
     return data.elements || [];
   } catch (error) {
-    console.warn('OSM query failed:', error);
+    // Silently use fallback on error - no need to log every failure
     return [];
   }
 };

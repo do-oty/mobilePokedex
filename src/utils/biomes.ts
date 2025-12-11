@@ -68,8 +68,15 @@ export const detectBiomeFallback = (
     return 'rare';
   }
   
-  // Urban: ~7% chance (cities, towns) - REDUCED from 20% to 7%
-  if ((latNorm > 0.85 && latNorm < 0.98) || (lonNorm > 0.85 && lonNorm < 0.98)) {
+  // Urban: ~20% chance (cities, towns) - increased for better urban detection
+  if (
+    (latNorm > 0.75 && latNorm < 0.95) || 
+    (lonNorm > 0.75 && lonNorm < 0.95) ||
+    (sum > 1.2 && sum < 1.8) ||
+    pattern1 === 6 || 
+    pattern2 === 6 ||
+    pattern3 === 6
+  ) {
     return 'urban';
   }
   
