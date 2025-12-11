@@ -101,7 +101,6 @@ const CaptureScreen = () => {
   const popupRef = useRef<NodeJS.Timeout | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const preCountdownRef = useRef<NodeJS.Timeout | null>(null);
-  const panLifeLostRef = useRef<boolean>(false); // Track if we already lost a life for panning failure
   const [camDevice, setCamDevice] = useState<CameraDevice | null>(null);
 
   const { popupInterval, popupDuration, targetSize, roundSeconds } = useMemo(() => {
@@ -305,7 +304,6 @@ const CaptureScreen = () => {
 
       const grace = panRequired ? 500 : 0;
       const durationExtra = panRequired ? 400 : 0;
-      panLifeLostRef.current = false; // Reset for each spawn
 
       const startSpawn = () => {
         setVisible(true);
@@ -313,15 +311,13 @@ const CaptureScreen = () => {
         popupRef.current = setTimeout(() => {
           setVisible(false);
           setShowDirOverlay(false);
-          // Only lose a life if we didn't already lose one for panning failure
-          if (!panLifeLostRef.current) {
-            setMisses(m => {
-              const newMisses = m + 1;
-              // Vibrate when losing a life
-              Vibration.vibrate(200);
-              return newMisses;
-            });
-          }
+          // Lose a life when Pokémon disappears without being caught
+          setMisses(m => {
+            const newMisses = m + 1;
+            // Vibrate when losing a life
+            Vibration.vibrate(200);
+            return newMisses;
+          });
         }, popupDuration + durationExtra);
       };
 
@@ -338,17 +334,10 @@ const CaptureScreen = () => {
             if (headingCheckRef.current) clearInterval(headingCheckRef.current);
             startSpawn();
           } else if (waited >= 2500) {
-            // Failed to pan in time - lose a life immediately
+            // Failed to pan in time - just spawn the Pokémon anyway (no punishment)
             if (headingCheckRef.current) clearInterval(headingCheckRef.current);
             setShowDirOverlay(false);
-            panLifeLostRef.current = true; // Mark that we already lost a life
-            setMisses(m => {
-              const newMisses = m + 1;
-              // Vibrate when losing a life due to failed pan
-              Vibration.vibrate(200);
-              return newMisses;
-            });
-            // Still spawn the Pokémon but skip losing another life
+            // Spawn the Pokémon normally without losing a life
             setTimeout(() => {
               startSpawn();
             }, 100);
