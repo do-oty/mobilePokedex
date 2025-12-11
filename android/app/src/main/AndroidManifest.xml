@@ -22,7 +22,7 @@
       tools:replace="android:appComponentFactory">
       <meta-data
         android:name="com.google.android.geo.API_KEY"
-        android:value="PLACEHOLDER_API_KEY" />
+        android:value="${GOOGLE_MAPS_API_KEY}" />
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"
