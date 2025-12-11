@@ -1,5 +1,6 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useEffect } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import TypeChip from './TypeChip';
 import { colors, typeColors } from '../theme/colors';
@@ -39,6 +40,9 @@ type Props = {
   captureRate: number;
   baseExperience: number;
   eggGroups: string[];
+  seen?: boolean; // Whether Pokemon has been seen
+  owned?: boolean; // Whether Pokemon has been caught
+  onShare?: () => void; // Share handler
 };
 
 const DexDetailCard = ({
@@ -61,13 +65,30 @@ const DexDetailCard = ({
   captureRate,
   baseExperience,
   eggGroups,
+  seen = true,
+  owned = false,
+  onShare,
 }: Props) => {
+  const isUnseen = !seen && !owned;
+  const isSeenOnly = seen && !owned; // Seen but not caught - show limited info
   const [expanded, setExpanded] = useState<'habitat' | 'abilities' | 'evolutions' | 'stats' | null>(null);
   const [imageLoading, setImageLoading] = useState(true);
 
   const toggle = (key: 'habitat' | 'abilities' | 'evolutions' | 'stats') =>
     setExpanded(prev => (prev === key ? null : key));
-  const heroSource = { uri: artwork || animatedSprite };
+  
+  // Reset image loading when Pokemon changes
+  useEffect(() => {
+    setImageLoading(true);
+  }, [id]);
+  
+  // Use artwork first, then animated sprite, then fallback to sprite
+  // Convert ID to numeric for sprite URL (remove leading zeros)
+  const numericId = id.replace(/^0+/, '') || '1';
+  const fallbackSprite = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${numericId}.png`;
+  const heroSource = { 
+    uri: (artwork || animatedSprite || fallbackSprite).trim()
+  };
   
   // Get gradient colors based on Pokemon type
   const primaryType = types[0]?.toLowerCase() || 'normal';
@@ -83,74 +104,104 @@ const DexDetailCard = ({
         <Text style={styles.subLabel}>ENTRY</Text>
         <Text style={styles.entryId}>#{id}</Text>
         <View style={styles.headerDivider} />
-        <Text style={styles.entryName}>{name}</Text>
+        <Text style={styles.entryName}>{isUnseen ? '???' : name}</Text>
       </View>
 
       <View style={styles.display}>
         <GridPattern />
-        {imageLoading && (
-          <ActivityIndicator
-            size="large"
-            color={colors.consoleAccent}
-            style={styles.imageLoader}
-          />
+        {isUnseen ? (
+          <View style={styles.unknownDisplay}>
+            <Text style={styles.unknownText}>?</Text>
+          </View>
+        ) : (
+          <>
+            {imageLoading && (
+              <ActivityIndicator
+                size="large"
+                color={colors.consoleAccent}
+                style={styles.imageLoader}
+              />
+            )}
+            <Image
+              source={heroSource}
+              style={styles.sprite}
+              onLoadEnd={() => setImageLoading(false)}
+            />
+          </>
         )}
-        <Image
-          source={heroSource}
-          style={styles.sprite}
-          onLoadEnd={() => setImageLoading(false)}
-        />
       </View>
 
-      <View style={styles.descriptorRow}>
-        <Text style={styles.descriptorLabel}>Descriptor</Text>
-        <Text style={styles.descriptorValue}>{descriptor}</Text>
-      </View>
-
-      <View style={styles.stats}>
-        <View style={styles.stat}>
-          <Text style={styles.statBoxLabel}>HEIGHT</Text>
-          <Text style={styles.statBoxValue}>{height}</Text>
+      {/* Show limited info for seen-only Pokémon */}
+      {isSeenOnly && (
+        <View style={styles.seenOnlyMessage}>
+          <Text style={styles.seenOnlyText}>
+            Data incomplete. This Pokémon has been observed in the wild, but no specimen has been captured for detailed analysis.
+          </Text>
         </View>
-        <View style={styles.stat}>
-          <Text style={styles.statBoxLabel}>WEIGHT</Text>
-          <Text style={styles.statBoxValue}>{weight}</Text>
-        </View>
-        <View style={styles.typeRow}>
-          {types.map(type => (
-            <TypeChip key={type} type={type} />
-          ))}
-        </View>
-      </View>
+      )}
 
-      <View style={styles.description}>
-        <Text style={styles.descriptionText}>{description}</Text>
-      </View>
+      {/* Show full details only for owned Pokémon */}
+      {owned && (
+        <>
+          <View style={styles.descriptorRow}>
+            <Text style={styles.descriptorLabel}>Descriptor</Text>
+            <Text style={styles.descriptorValue}>{descriptor}</Text>
+          </View>
 
-      <View style={styles.pillRow}>
-        <PillButton
-          label="Stats"
-          active={expanded === 'stats'}
-          onPress={() => toggle('stats')}
-        />
-        <PillButton
-          label="Abilities"
-          active={expanded === 'abilities'}
-          onPress={() => toggle('abilities')}
-        />
-        <PillButton
-          label="Evolution"
-          active={expanded === 'evolutions'}
-          onPress={() => toggle('evolutions')}
-        />
-        <PillButton
-          label="Habitat"
-          active={expanded === 'habitat'}
-          onPress={() => toggle('habitat')}
-        />
-      </View>
+          <View style={styles.stats}>
+            <View style={styles.stat}>
+              <Text style={styles.statBoxLabel}>HEIGHT</Text>
+              <Text style={styles.statBoxValue}>{height}</Text>
+            </View>
+            <View style={styles.stat}>
+              <Text style={styles.statBoxLabel}>WEIGHT</Text>
+              <Text style={styles.statBoxValue}>{weight}</Text>
+            </View>
+            <View style={styles.typeRow}>
+              {types.map(type => (
+                <TypeChip key={type} type={type} />
+              ))}
+            </View>
+          </View>
 
-      {expanded === 'stats' && (
+          <View style={styles.description}>
+            <Text style={styles.descriptionText}>{description}</Text>
+          </View>
+
+          <View style={styles.pillRow}>
+            <PillButton
+              label="Stats"
+              active={expanded === 'stats'}
+              onPress={() => toggle('stats')}
+            />
+            <PillButton
+              label="Abilities"
+              active={expanded === 'abilities'}
+              onPress={() => toggle('abilities')}
+            />
+            <PillButton
+              label="Evolution"
+              active={expanded === 'evolutions'}
+              onPress={() => toggle('evolutions')}
+            />
+            <PillButton
+              label="Habitat"
+              active={expanded === 'habitat'}
+              onPress={() => toggle('habitat')}
+            />
+            {onShare && (
+              <Pressable
+                style={styles.sharePillButton}
+                onPress={onShare}
+                android_ripple={{ color: colors.consoleAccent }}>
+                <Ionicons name="share-outline" size={14} color={colors.consoleAccent} />
+              </Pressable>
+            )}
+          </View>
+        </>
+      )}
+
+      {owned && expanded === 'stats' && (
         <View style={styles.sectionBody}>
           <StatBar label="HP" value={stats.hp} max={255} color="#FF5959" />
           <StatBar label="ATK" value={stats.attack} max={190} color="#F5AC78" />
@@ -179,14 +230,14 @@ const DexDetailCard = ({
         </View>
       )}
 
-      {expanded === 'abilities' && (
+      {owned && expanded === 'abilities' && (
         <View style={styles.sectionBody}>
           <InfoPanel title="Abilities" items={abilities} />
           <InfoPanel title="Signature Moves" items={moves} />
         </View>
       )}
 
-      {expanded === 'evolutions' && (
+      {owned && expanded === 'evolutions' && (
         <View style={styles.sectionBody}>
           <View style={styles.evolutionChain}>
             {evolutions.map((evo, idx) => (
@@ -202,7 +253,7 @@ const DexDetailCard = ({
         </View>
       )}
 
-      {expanded === 'habitat' && (
+      {owned && expanded === 'habitat' && (
         <View style={styles.sectionBody}>
           <View style={styles.metaColumn}>
             <Text style={styles.metaLabel}>Habitat</Text>
@@ -366,6 +417,18 @@ const styles = StyleSheet.create({
   imageLoader: {
     position: 'absolute',
   },
+  unknownDisplay: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  unknownText: {
+    color: colors.textMuted,
+    fontSize: 64,
+    fontWeight: '700',
+    opacity: 0.5,
+  },
   typeColorOverlay: {
     position: 'absolute',
     top: 0,
@@ -458,6 +521,16 @@ const styles = StyleSheet.create({
   pillTextActive: {
     color: colors.consolePanel,
     fontWeight: '700',
+  },
+  sharePillButton: {
+    width: 40,
+    height: 36,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.consoleAccent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.blackPanel,
   },
   metaColumn: {
     flex: 1,
@@ -583,6 +656,21 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     marginHorizontal: 8,
+  },
+  seenOnlyMessage: {
+    backgroundColor: colors.blackPanel,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    padding: 12,
+    marginTop: 8,
+  },
+  seenOnlyText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });
 

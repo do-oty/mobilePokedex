@@ -1,6 +1,7 @@
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { memo } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
 import ConsoleIcon from './icons/ConsoleIcon';
@@ -14,20 +15,24 @@ const hapticOptions = {
 type TabConfig = {
   name: string;
   label: string;
-  icon: 'terminal' | 'capture' | 'map' | 'social' | 'profile';
+  icon: 'terminal' | 'habitat' | 'map' | 'social' | 'profile';
 };
 
 const tabs: TabConfig[] = [
   { name: 'Terminal', label: 'TERMINAL', icon: 'terminal' },
-  { name: 'Capture', label: 'CAPTURE', icon: 'capture' },
+  { name: 'Habitat', label: 'HABITAT', icon: 'habitat' },
   { name: 'Map', label: 'MAP', icon: 'map' },
   { name: 'Social', label: 'SOCIAL', icon: 'social' },
   { name: 'Profile', label: 'PROFILE', icon: 'profile' },
 ];
 
 const CustomTabBar = ({ state, navigation }: BottomTabBarProps) => {
+  const insets = useSafeAreaInsets();
+  const bottomPad = Math.max(insets.bottom, 16);
+  const barHeight = 76 + bottomPad;
+
   return (
-    <View style={styles.tabBar}>
+    <View style={[styles.tabBar, { paddingBottom: bottomPad, height: barHeight }]}>
       {tabs.map((tab, index) => {
         const isFocused = state.index === index;
         const scaleAnim = new Animated.Value(1);
@@ -106,9 +111,9 @@ const styles = StyleSheet.create({
     borderColor: colors.divider,
     backgroundColor: colors.consolePanel,
     alignItems: 'stretch',
-    height: 72,
-    paddingBottom: 12,
-    paddingTop: 8,
+    height: 100,
+    paddingBottom: 28,
+    paddingTop: 12,
   },
   tabButton: {
     flex: 1,

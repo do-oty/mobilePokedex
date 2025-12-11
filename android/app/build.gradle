@@ -1,6 +1,7 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+apply plugin: "com.google.gms.google-services"
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -118,4 +119,10 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    // Note: @react-native-firebase packages automatically include Firebase BoM and native SDKs
+    // No need to manually add Firebase dependencies - they're handled by the React Native Firebase packages
+
+    // Ensure location services are available for @react-native-community/geolocation
+    implementation("com.google.android.gms:play-services-location:21.1.0")
 }

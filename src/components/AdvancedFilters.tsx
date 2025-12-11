@@ -6,7 +6,6 @@ import { colors, typeColors } from '../theme/colors';
 export type FilterOptions = {
   types: string[];
   difficulty: 'all' | 'easy' | 'hard' | 'legendary';
-  generation: number | null;
 };
 
 type Props = {
@@ -20,7 +19,6 @@ const pokemonTypes = [
   'rock', 'ghost', 'dragon', 'dark', 'steel', 'fairy'
 ];
 
-const generations = [1, 2, 3, 4, 5, 6, 7, 8];
 
 const AdvancedFilters = ({ filters, onFilterChange }: Props) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -33,7 +31,6 @@ const AdvancedFilters = ({ filters, onFilterChange }: Props) => {
     onFilterChange({
       types: [],
       difficulty: 'all',
-      generation: null,
     });
   };
 
@@ -48,8 +45,7 @@ const AdvancedFilters = ({ filters, onFilterChange }: Props) => {
 
   const activeFiltersCount = 
     (filters.types.length > 0 ? 1 : 0) +
-    (filters.difficulty !== 'all' ? 1 : 0) +
-    (filters.generation ? 1 : 0);
+    (filters.difficulty !== 'all' ? 1 : 0);
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -58,11 +54,6 @@ const AdvancedFilters = ({ filters, onFilterChange }: Props) => {
       case 'legendary': return '#F85C50';
       default: return null;
     }
-  };
-
-  const getGenerationColor = (gen: number) => {
-    const genColors = ['#EE8130', '#F7D02C', '#6390F0', '#A8A77A', '#34F5C5', '#F95587', '#FFD75E', '#B6A136'];
-    return genColors[gen - 1] || colors.consoleAccent;
   };
 
   return (
@@ -166,51 +157,6 @@ const AdvancedFilters = ({ filters, onFilterChange }: Props) => {
                         isActive && styles.chipTextActive,
                       ]}>
                       {label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-
-          {/* Generation Filter */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Generation</Text>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.chipRow}>
-              <Pressable
-                style={[
-                  styles.chip,
-                  !filters.generation && styles.chipActive,
-                ]}
-                onPress={() => updateFilter('generation', null)}>
-                <Text
-                  style={[
-                    styles.chipText,
-                    !filters.generation && styles.chipTextActive,
-                  ]}>
-                  All
-                </Text>
-              </Pressable>
-              {generations.map(gen => {
-                const isActive = filters.generation === gen;
-                const color = getGenerationColor(gen);
-                return (
-                  <Pressable
-                    key={gen}
-                    style={[
-                      styles.chip,
-                      isActive && { backgroundColor: color, borderColor: color },
-                    ]}
-                    onPress={() => updateFilter('generation', gen)}>
-                    <Text
-                      style={[
-                        styles.chipText,
-                        isActive && styles.chipTextActive,
-                      ]}>
-                      Gen {gen}
                     </Text>
                   </Pressable>
                 );

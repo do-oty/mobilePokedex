@@ -1,20 +1,36 @@
 import { memo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import ConsoleIcon from '../components/icons/ConsoleIcon';
-import { sampleDexEntries } from '../data/sampleDexEntries';
+import { useAuth } from '../context/AuthContext';
+import { usePokemon } from '../context/PokemonContext';
+import { useRegion } from '../context/RegionContext';
+import { useUser } from '../context/UserContext';
 import { colors } from '../theme/colors';
 import { getXPProgress } from '../utils/xpSystem';
 
 const ProfileScreen = () => {
-  const seenCount = sampleDexEntries.filter(entry => entry.seen).length;
-  const ownedCount = sampleDexEntries.filter(entry => entry.owned).length;
-  const totalCount = sampleDexEntries.length;
-  const completionPercent = Math.round((ownedCount / totalCount) * 100);
+  const { user, signOut } = useAuth();
+  const { userData, loading } = useUser();
+  const { totalCount } = usePokemon();
+  const { selectedRegion } = useRegion();
 
-  // Mock XP - in real app this would come from AsyncStorage/Firebase
-  const currentXP = 650; // Example: Level 3 with progress
-  const xpProgress = getXPProgress(currentXP);
+  if (loading || !userData) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.consoleAccent} />
+      </View>
+    );
+  }
+
+  const seenCount = userData.seenPokemon.length;
+  const ownedCount = userData.caughtPokemon.length;
+  // Get total count from pokedex (all Pokemon in region, not just loaded ones)
+  const completionPercent = totalCount > 0 ? Math.round((ownedCount / totalCount) * 100) : 0;
+
+  const xpProgress = getXPProgress(userData.xp);
+  const displayName = user?.displayName || user?.email?.split('@')[0] || 'Trainer';
+  const avatarInitial = displayName.charAt(0).toUpperCase();
 
   // Simple badges that check real conditions
   const badges = [
@@ -39,23 +55,26 @@ const ProfileScreen = () => {
     {
       id: '4',
       name: 'Explorer',
-      earned: seenCount >= totalCount,
+      earned: seenCount >= 100,
       icon: 'map' as const,
     },
   ];
 
-  const handleLogout = () => {
-    // Placeholder for logout logic
-    console.log('Logout pressed');
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.profileHeader}>
         <View style={styles.avatarLarge}>
-          <Text style={styles.avatarText}>T</Text>
+          <Text style={styles.avatarText}>{avatarInitial}</Text>
         </View>
-        <Text style={styles.trainerName}>Trainer</Text>
+        <Text style={styles.trainerName}>{displayName}</Text>
         <Text style={styles.trainerLevel}>Level {xpProgress.level}</Text>
       </View>
 
@@ -75,7 +94,10 @@ const ProfileScreen = () => {
       </View>
 
       <View style={styles.statsCard}>
-        <Text style={styles.sectionTitle}>Pokedex Progress</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Pokedex Progress</Text>
+          <Text style={styles.regionLabel}>{selectedRegion.name}</Text>
+        </View>
         
         <View style={styles.progressBar}>
           <View style={[styles.progressFill, { width: `${completionPercent}%` }]} />
@@ -223,10 +245,22 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   sectionTitle: {
     color: colors.textPrimary,
     fontSize: 16,
     fontWeight: '700',
+  },
+  regionLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   progressBar: {
     height: 12,
@@ -318,6 +352,12 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 13,
     fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

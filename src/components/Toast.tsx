@@ -10,7 +10,7 @@ type ToastProps = {
   type?: 'success' | 'error' | 'info';
 };
 
-const Toast = ({ message, visible, duration = 2000, type = 'info' }: ToastProps) => {
+const Toast = ({ message, visible, duration = 1200, type = 'info' }: ToastProps) => {
   const translateY = useRef(new Animated.Value(100)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -75,13 +75,13 @@ const Toast = ({ message, visible, duration = 2000, type = 'info' }: ToastProps)
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 90,
-    left: 16,
-    right: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    elevation: 6,
+    bottom: 72,
+    left: 20,
+    right: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.27,
@@ -90,8 +90,8 @@ const styles = StyleSheet.create({
   },
   message: {
     color: colors.blackPanel,
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
     textAlign: 'center',
   },
 });

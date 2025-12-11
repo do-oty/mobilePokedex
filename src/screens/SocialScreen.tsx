@@ -1,9 +1,12 @@
-import { memo } from 'react';
-import { FlatList, Image, StyleSheet, Text, View } from 'react-native';
+import { memo, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, FlatList, Image, StyleSheet, Text, View } from 'react-native';
 
 import ConsoleIcon from '../components/icons/ConsoleIcon';
+import { useUser } from '../context/UserContext';
 import { colors } from '../theme/colors';
 import { getXPProgress } from '../utils/xpSystem';
+import { firestore } from '../config/firebase';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 type CapturePost = {
   id: string;
@@ -11,47 +14,147 @@ type CapturePost = {
   pokemon: string;
   pokemonId: string;
   location: string;
-  timestamp: string;
+  timestamp: number;
   sprite: string;
+  coords?: { latitude: number; longitude: number } | null;
+  type: 'capture' | 'seen';
 };
 
-const mockPosts: CapturePost[] = [
-  {
-    id: '1',
-    username: 'TrainerAsh',
-    pokemon: 'Snivy',
-    pokemonId: '#001',
-    location: 'Nuvema Town',
-    timestamp: '2h ago',
-    sprite:
-      'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/495.png',
-  },
-  {
-    id: '2',
-    username: 'PokeMaster_N',
-    pokemon: 'Victini',
-    pokemonId: '#006',
-    location: 'Liberty Garden',
-    timestamp: '5h ago',
-    sprite:
-      'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/494.png',
-  },
-  {
-    id: '3',
-    username: 'ChampionIris',
-    pokemon: 'Serperior',
-    pokemonId: '#003',
-    location: 'Dragonspiral Tower',
-    timestamp: '1d ago',
-    sprite:
-      'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/497.png',
-  },
-];
+const formatTimeAgo = (timestamp: number): string => {
+  const diff = Date.now() - timestamp;
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  return 'just now';
+};
 
 const SocialScreen = () => {
-  // Mock XP - in real app this would come from AsyncStorage/Firebase
-  const currentXP = 650; // Example: Level 3 with progress
-  const xpProgress = getXPProgress(currentXP);
+  const { userData, loading } = useUser();
+  const [feed, setFeed] = useState<CapturePost[]>([]);
+  const [feedLoading, setFeedLoading] = useState(true);
+  const [feedError, setFeedError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setFeedLoading(true);
+    setFeedError(null);
+
+    let capturesUnsub: (() => void) | null = null;
+    let seenUnsub: (() => void) | null = null;
+    let capturesData: CapturePost[] = [];
+    let seenData: CapturePost[] = [];
+
+    const parseTimestamp = (ts: any) => {
+      if (ts?.toMillis) return ts.toMillis() as number;
+      if (typeof ts === 'number') return ts;
+      if (typeof ts === 'string') {
+        const n = Number(ts);
+        if (!Number.isNaN(n)) return n;
+      }
+      return Date.now();
+    };
+
+    const updateFeed = () => {
+      const merged = [...capturesData, ...seenData]
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 10);
+      console.log('📰 Merged feed:', merged.length, 'items', merged.map(m => `${m.type}:${m.pokemon}`));
+      setFeed(merged);
+      setFeedLoading(false);
+    };
+
+    capturesUnsub = firestore()
+      .collection('captures')
+      .orderBy('timestampMs', 'desc')
+      .limit(20)
+      .onSnapshot(
+        snap => {
+          console.log('📸 Captures snapshot:', snap.docs.length, 'docs');
+          capturesData = snap.docs.map(doc => {
+            const d = doc.data() as any;
+            console.log('📸 Capture doc:', d.pokemon, d.username, d.timestampMs);
+            return {
+              id: `capture-${doc.id}`,
+              username: d.username || 'Trainer',
+              pokemon: d.pokemon || 'Unknown',
+              pokemonId: d.pokemonId || '#000',
+              location: d.location || 'Unknown',
+              timestamp: parseTimestamp(d.timestampMs ?? d.timestamp),
+              coords: d.coords || null,
+              sprite:
+                d.sprite ||
+                'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png',
+              type: 'capture' as const,
+            };
+          });
+          updateFeed();
+        },
+        (err) => {
+          console.error('❌ Error loading captures:', err);
+          capturesData = [];
+          updateFeed();
+        },
+      );
+
+    seenUnsub = firestore()
+      .collection('seen')
+      .orderBy('timestampMs', 'desc')
+      .limit(20)
+      .onSnapshot(
+        snap => {
+          console.log('👁️ Seen snapshot:', snap.docs.length, 'docs');
+          seenData = snap.docs.map(doc => {
+            const d = doc.data() as any;
+            console.log('👁️ Seen doc:', d.pokemon, d.username, d.timestampMs);
+            return {
+              id: `seen-${doc.id}`,
+              username: d.username || 'Trainer',
+              pokemon: d.pokemon || 'Unknown',
+              pokemonId: d.pokemonId || '#000',
+              location: d.location || 'Unknown',
+              timestamp: parseTimestamp(d.timestampMs ?? d.timestamp),
+              coords: d.coords || null,
+              sprite:
+                d.sprite ||
+                'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png',
+              type: 'seen' as const,
+            };
+          });
+          updateFeed();
+        },
+        (err) => {
+          console.error('❌ Error loading seen:', err);
+          seenData = [];
+          updateFeed();
+        },
+      );
+
+    return () => {
+      if (capturesUnsub) capturesUnsub();
+      if (seenUnsub) seenUnsub();
+    };
+  }, []);
+
+  const dailyGoal = useMemo(() => {
+    return {
+      progress: userData?.dailyGoalProgress ?? 0,
+      target: userData?.dailyGoalTarget ?? 3,
+      xpReward: 50,
+    };
+  }, [userData]);
+
+  if (loading || !userData) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.consoleAccent} />
+      </View>
+    );
+  }
+
+  const xpProgress = getXPProgress(userData.xp);
+  const streak = userData.currentStreak;
 
   return (
     <View style={styles.container}>
@@ -73,7 +176,7 @@ const SocialScreen = () => {
         <View style={styles.progressCard}>
           <ConsoleIcon variant="owned" size={20} color={colors.consoleAccent} />
           <View style={styles.progressText}>
-            <Text style={styles.progressValue}>7</Text>
+            <Text style={styles.progressValue}>{streak}</Text>
             <Text style={styles.progressLabel}>Day Streak</Text>
           </View>
         </View>
@@ -81,8 +184,10 @@ const SocialScreen = () => {
         <View style={styles.progressCard}>
           <ConsoleIcon variant="terminal" size={20} color={colors.consoleAccent} />
           <View style={styles.progressText}>
-            <Text style={styles.progressValue}>2/3</Text>
-            <Text style={styles.progressLabel}>Daily Goal</Text>
+            <Text style={styles.progressValue}>
+              {dailyGoal.progress}/{dailyGoal.target}
+            </Text>
+            <Text style={styles.progressLabel}>Daily Goal (+{dailyGoal.xpReward} XP)</Text>
           </View>
         </View>
       </View>
@@ -104,7 +209,7 @@ const SocialScreen = () => {
       <Text style={styles.feedLabel}>Global Feed</Text>
 
       <FlatList
-        data={mockPosts}
+        data={feed}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
@@ -113,7 +218,7 @@ const SocialScreen = () => {
             <View style={styles.postHeader}>
               <View style={styles.postMeta}>
                 <Text style={styles.username}>{item.username}</Text>
-                <Text style={styles.timestamp}>{item.timestamp}</Text>
+                <Text style={styles.timestamp}>{formatTimeAgo(item.timestamp)}</Text>
               </View>
             </View>
 
@@ -124,11 +229,24 @@ const SocialScreen = () => {
                   <Text style={styles.pokemonName}>{item.pokemon}</Text>{' '}
                   <Text style={styles.pokemonId}>{item.pokemonId}</Text>
                 </Text>
-                <Text style={styles.location}>{item.location}</Text>
+                <Text style={styles.location}>
+                  {item.type === 'capture' ? 'Captured' : 'Seen'} in {item.location}
+                  {item.coords
+                    ? ` · (${item.coords.latitude.toFixed(3)}, ${item.coords.longitude.toFixed(3)})`
+                    : ''}
+                </Text>
               </View>
             </View>
           </View>
         )}
+        ListHeaderComponent={null}
+        ListEmptyComponent={
+          feedLoading ? (
+            <ActivityIndicator color={colors.consoleAccent} style={{ marginTop: 20 }} />
+          ) : (
+            <Text style={styles.placeholderText}>No captures yet.</Text>
+          )
+        }
       />
     </View>
   );
@@ -309,6 +427,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  errorText: {
+    color: colors.warning,
+    fontSize: 11,
+    paddingHorizontal: 16,
+    marginBottom: 6,
+  },
   sprite: {
     width: 50,
     height: 50,
@@ -333,6 +457,18 @@ const styles = StyleSheet.create({
   location: {
     color: colors.textMuted,
     fontSize: 10,
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 20,
   },
 });
 

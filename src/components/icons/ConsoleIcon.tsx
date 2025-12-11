@@ -7,6 +7,7 @@ export type ConsoleIconVariant =
   | 'terminal'
   | 'capture'
   | 'map'
+  | 'habitat'
   | 'eye'
   | 'owned'
   | 'region'
@@ -61,6 +62,23 @@ const ConsoleIcon = ({ variant, size = 20, color = colors.highlight }: Props) =>
         <View style={[sharedStyle, styles.mapWrapper]}>
           <View style={[styles.mapDiamond, { borderColor: color }]} />
           <View style={[styles.mapDot, { backgroundColor: color }]} />
+        </View>
+      );
+    case 'habitat':
+      return (
+        <View style={[sharedStyle, styles.habitatWrapper]}>
+          <View
+            style={[
+              styles.habitatCanopy,
+              { backgroundColor: color, width: size * 0.82, height: size * 0.5 },
+            ]}
+          />
+          <View
+            style={[
+              styles.habitatTrunk,
+              { backgroundColor: color, width: size * 0.16, height: size * 0.38 },
+            ]}
+          />
         </View>
       );
     case 'eye':
@@ -196,6 +214,19 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
+  },
+  habitatWrapper: {
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  habitatCanopy: {
+    borderRadius: 999,
+    opacity: 0.9,
+  },
+  habitatTrunk: {
+    marginTop: -4,
+    borderRadius: 3,
+    opacity: 0.9,
   },
   eyeWrapper: {
     alignItems: 'center',
