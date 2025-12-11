@@ -33,6 +33,16 @@ local.properties
 .cxx/
 *.keystore
 !debug.keystore
+
+# Secrets and sensitive files
+android/app/google-services.json
+android/app/debug.keystore
+ios/.xcode.env
+*.env
+*.env.local
+*.env.*.local
+**/google-services.json
+**/GoogleService-Info.plist
 .kotlin/
 
 # node.js
